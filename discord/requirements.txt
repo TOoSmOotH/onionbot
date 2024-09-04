@@ -1,0 +1,5 @@
+discord.py==2.0.0       # For interacting with the Discord API
+requests                # For making HTTP requests to the OPNsense API
+cryptography            # For encrypting and decrypting sensitive data (like API keys)
+ipaddress               # For validating IP addresses and CIDR blocks (this is part of Python's standard library, but you can include it for clarity)
+urllib3                 # For handling HTTPS requests and suppressing warnings
