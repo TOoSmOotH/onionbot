@@ -21,13 +21,13 @@ Before running the bot, make sure you have the following installed on your machi
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/discord-bot.git
-cd discord-bot
+git clone https://github.com/TOoSmOotH/onionbot.git
+cd onionbot/discord
 ```
 
 ### 2. Set Up Environment Variables
 
-Create a `.env` file in the root directory to store your Discord token and any other environment variables (such as OPNsense API credentials).
+Create a `.env` file in the root directory to store your Discord token.
 
 ```bash
 DISCORD_TOKEN=your_discord_token_here
@@ -46,10 +46,9 @@ pip install -r requirements.txt
 Once the dependencies are installed, you can run the bot with:
 
 ```bash
-python your_bot_script.py
+python onion_discordbot.py
 ```
 
-Replace `your_bot_script.py` with the name of your bot script.
 
 ## Configuration
 
@@ -58,10 +57,7 @@ Replace `your_bot_script.py` with the name of your bot script.
 Make sure to set the following variables either in the `.env` file or by passing them as environment variables:
 
 - `DISCORD_TOKEN`: Your Discord bot token.
-- `OPNSENSE_API_KEY`: The API key for accessing OPNsense.
-- `OPNSENSE_API_SECRET`: The API secret for accessing OPNsense.
-- `OPNSENSE_IP`: The IP address of your OPNsense instance.
-- `ALIAS_NAME`: The alias name used for blocking IPs.
+
 
 ## Bot Commands
 
