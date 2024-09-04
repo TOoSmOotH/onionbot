@@ -49,6 +49,7 @@ Once the dependencies are installed, you can run the bot with:
 python onion_discordbot.py
 ```
 
+Once you add the bot to the channel the first user that types !help will become the bot admin. 
 
 ## Configuration
 
