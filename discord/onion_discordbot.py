@@ -215,6 +215,7 @@ async def on_message(message):
             !list_ips                      : List all IPs currently in the configured alias.
             !apply_rules                   : Apply firewall rules.
             !help                          : Show this help message.
+            
             Admin-only commands:
             !set_opnsense_ip <ip>         : Set the IP address of the OPNsense server.
             !set_opnsense_api_key <api_key> <api_secret> : Set the OPNsense API key and secret.
