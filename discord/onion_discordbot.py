@@ -276,12 +276,67 @@ def block_ip_temporarily(ip_address, message_channel):
         save_configurations(configurations)
         return f"IP {ip_address} has been permanently banned after 3 blocks."
 
-    # Perform reverse DNS lookup for the IP
+    # Perform reverse DNS lookup for the IP (optional)
     hostname = reverse_dns_lookup(ip_address)
+
+    # Add the IP to the OPNsense firewall alias
+    result = add_ip_to_alias(ip_address)  # Call the function to add IP to alias
+    if "Failed" in result:
+        return result  # Return failure message if adding to alias fails
 
     save_configurations(configurations)
     asyncio.create_task(schedule_unblock(ip_address, message_channel))
     return f"IP {ip_address} ({hostname}) has been temporarily blocked. This is block {block_count}."
+
+# Function to compare local blocked IPs with OPNsense alias IPs (formatted for readability)
+def audit_blocked_ips():
+    # Fetch the IPs from the OPNsense alias
+    config = configurations
+    alias_name = config.get('alias_name')
+    if not alias_name:
+        return "Alias name is not set. Use !set_alias <alias_name> to configure it."
+
+    url = f"https://{config['opnsense_ip']}/api/firewall/alias_util/list/{alias_name}"
+
+    # Make the request to get the current list of IPs in the alias
+    response = requests.get(url, auth=(config['api_key'], config['api_secret']), verify=False)
+    print(f"OPNsense Response (list IPs): {response.status_code}, {response.text}")  # Log response
+
+    if response.status_code == 200:
+        try:
+            ip_list = response.json()
+            # Fetch the IP addresses using the correct key "ip"
+            opnsense_ips = [ip_entry.get('ip', '').strip() for ip_entry in ip_list.get('rows', []) if ip_entry.get('ip', '').strip()]
+            
+            print(f"Debug: OPNsense IPs: {opnsense_ips}")  # Debugging print to check the list of valid IPs
+
+            # Get local blocked IPs
+            local_blocked_ips = list(configurations['blocked_ips'].keys())
+            
+            # Debugging: print local blocked IPs
+            print(f"Debug: Local Blocked IPs: {local_blocked_ips}")
+
+            # Find IPs that are in the local list but not in OPNsense
+            missing_in_alias = [ip for ip in local_blocked_ips if ip not in opnsense_ips]
+
+            # Find IPs that are in the OPNsense alias but not in the local list
+            extra_in_alias = [ip for ip in opnsense_ips if ip not in local_blocked_ips]
+
+            # Report discrepancies with new line formatting
+            report = []
+            if missing_in_alias:
+                report.append("IPs in the local blocked list but missing in OPNsense alias:\n" + "\n".join(missing_in_alias))
+            if extra_in_alias:
+                report.append("IPs in the OPNsense alias but missing in the local blocked list:\n" + "\n".join(extra_in_alias))
+            if not report:
+                return "The local blocked list and the OPNsense alias are in sync."
+
+            return "\n\n".join(report)  # Separate different sections with a blank line
+        except Exception as e:
+            print(f"Error while parsing the IP list: {str(e)}")
+            return "Failed to parse the IP list from the OPNsense API response."
+    else:
+        return f"Failed to retrieve IP list from alias {alias_name}. Status code: {response.status_code}"
 
 # Function to unblock an IP after the timeout
 async def schedule_unblock(ip_address, message_channel):
@@ -595,6 +650,15 @@ async def on_message(message):
         elif message.content.startswith('!list_users'):
             user_list = [f"Admin: {admin_user_id}"] + [f"User: {user}" for user in authorized_users]
             await message.channel.send("\n".join(user_list))
+
+        # Audit local blocked IPs against the OPNsense alias
+        if message.content.startswith('!audit'):
+            try:
+                audit_report = audit_blocked_ips()
+                await message.channel.send(audit_report)
+            except Exception as e:
+                await message.channel.send(f"An error occurred during the audit: {str(e)}")
+
 
 # Run the Discord bot
 client.run(DISCORD_TOKEN)

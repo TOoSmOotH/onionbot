@@ -72,6 +72,14 @@ Make sure to set the following variables either in the `.env` file or by passing
 | `!set_opnsense_api_key <api_key> <api_secret>` | Sets the OPNsense API key and secret.              | Admin Only             |
 | `!set_alias <alias_name>`  | Sets the alias used for blocking IP addresses.                           | Admin Only             |
 | `!list_users`         | Lists all authorized users and the admin.                                   | Admin Only             |
+| `!audit`              | Compares the local blocked list with the OPNsense alias for discrepancies.   | Admin & Authorized Users|
+| `!allowlist add <IP_ADDRESS>` | Adds an IP to the allowlist to prevent it from being blocked.        | Admin & Authorized Users|
+| `!allowlist remove <IP_ADDRESS>` | Removes an IP from the allowlist.                                 | Admin & Authorized Users|
+| `!allowlist list`     | Lists all IPs in the allowlist.                                              | Admin & Authorized Users|
+| `!unban <IP_ADDRESS>` | Unbans an IP from the temporary or permanent ban list.                       | Admin & Authorized Users|
+| `!toggle_auto_apply`  | Toggles automatic firewall rule application after blocking an IP.           | Admin Only             |
+| `!set_block_timeout <seconds>` | Sets the timeout duration for temporarily blocked IPs.              | Admin Only             |
+
 
 ## Stopping the Bot
 
