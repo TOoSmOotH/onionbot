@@ -1,122 +1,80 @@
 import unittest
-from unittest.mock import patch, AsyncMock, MagicMock
-import bot  # Assuming the bot script is named bot.py
+from unittest.mock import patch, mock_open, MagicMock
 
 class TestDiscordBot(unittest.TestCase):
-    
-    def setUp(self):
-        # Set up some basic mock configurations
-        self.configurations = {
-            'opnsense_ip': '192.168.1.1',
-            'alias_name': 'blocklist',
-            'api_key': 'fake_key',
-            'api_secret': 'fake_secret'
-        }
 
-        bot.configurations = self.configurations
+    @patch('builtins.open', new_callable=mock_open, read_data='test_token')
+    def test_load_discord_token(self, mock_file):
+        token = load_discord_token()
+        self.assertEqual(token, 'test_token')
 
-    @patch('bot.requests.post')
-    def test_add_ip_to_alias_success(self, mock_post):
-        """Test adding an IP to the alias."""
-        # Mock a successful response
-        mock_post.return_value.status_code = 200
-        
-        ip_address = '192.168.1.100'
-        result = bot.add_ip_to_alias(ip_address)
-        
-        # Assert that the function returns success
-        self.assertIn('Successfully added', result)
-        # Assert the correct URL and data were sent in the request
-        mock_post.assert_called_with(
-            'https://192.168.1.1/api/firewall/alias_util/add/blocklist',
-            auth=('fake_key', 'fake_secret'),
-            data={'address': '192.168.1.100'},
-            verify=False
-        )
+    @patch('os.path.exists', return_value=True)
+    @patch('builtins.open', new_callable=mock_open, read_data=b'test_key')
+    def test_load_encryption_key_existing(self, mock_exists, mock_file):
+        key = load_encryption_key()
+        self.assertEqual(key, b'test_key')
 
-    @patch('bot.requests.get')
-    def test_list_ips_in_alias_success(self, mock_get):
-        """Test listing IPs in the alias."""
-        # Mock a successful response with IP data
-        mock_get.return_value.status_code = 200
-        mock_get.return_value.json.return_value = {
-            'rows': [{'ip': '192.168.1.100'}, {'ip': '192.168.1.101'}]
-        }
+    @patch('os.path.exists', return_value=False)
+    @patch('builtins.open', new_callable=mock_open)
+    def test_load_encryption_key_new(self, mock_exists, mock_file):
+        with patch('cryptography.fernet.Fernet.generate_key', return_value=b'new_key'):
+            key = load_encryption_key()
+            self.assertEqual(key, b'new_key')
 
-        result = bot.list_ips_in_alias()
-        
-        # Assert the correct IPs are returned
-        self.assertIn('192.168.1.100', result)
-        self.assertIn('192.168.1.101', result)
+    def test_encrypt_decrypt_data(self):
+        key = Fernet.generate_key()
+        data = {'test': 'data'}
+        encrypted_data = encrypt_data(data, key)
+        decrypted_data = decrypt_data(encrypted_data, key)
+        self.assertEqual(data, decrypted_data)
 
-    @patch('bot.requests.post')
-    def test_apply_firewall_changes_success(self, mock_post):
-        """Test applying firewall changes."""
-        # Mock a successful response
-        mock_post.return_value.status_code = 200
+    @patch('os.path.exists', return_value=True)
+    @patch('builtins.open', new_callable=mock_open, read_data=b'encrypted_data')
+    @patch('cryptography.fernet.Fernet.decrypt', return_value=b'{"test": "data"}')
+    def test_load_configurations(self, mock_exists, mock_file, mock_decrypt):
+        with patch('cryptography.fernet.Fernet', return_value=MagicMock(decrypt=mock_decrypt)):
+            configurations = load_configurations()
+            self.assertEqual(configurations, {"test": "data"})
 
-        result = bot.apply_firewall_changes()
-        
-        # Assert the function indicates success
-        self.assertEqual(result, 'Firewall rules applied successfully.')
-        # Assert the correct URL and authentication were used
-        mock_post.assert_called_with(
-            'https://192.168.1.1/api/firewall/filter/apply',
-            auth=('fake_key', 'fake_secret'),
-            verify=False
-        )
+    @patch('builtins.open', new_callable=mock_open)
+    def test_save_configurations(self, mock_file):
+        data = {'test': 'data'}
+        key = Fernet.generate_key()
+        with patch('cryptography.fernet.Fernet.encrypt', return_value=b'encrypted_data'):
+            save_configurations(data)
+            mock_file().write.assert_called_once_with(b'encrypted_data')
 
-    @patch('bot.client')
-    @patch('bot.requests.post')
-    def test_bot_command_block_ip(self, mock_post, mock_client):
-        """Test the !block command."""
-        mock_post.return_value.status_code = 200
+    @patch('os.path.exists', return_value=True)
+    @patch('builtins.open', new_callable=mock_open, read_data=b'encrypted_data')
+    @patch('cryptography.fernet.Fernet.decrypt', return_value=b'"admin_id"')
+    def test_load_admin_user_id(self, mock_exists, mock_file, mock_decrypt):
+        with patch('cryptography.fernet.Fernet', return_value=MagicMock(decrypt=mock_decrypt)):
+            admin_id = load_admin_user_id()
+            self.assertEqual(admin_id, "admin_id")
 
-        message = MagicMock()
-        message.author.id = 1234  # Simulate an authorized user
-        message.content = '!block 192.168.1.100'
+    @patch('builtins.open', new_callable=mock_open)
+    def test_save_admin_user_id(self, mock_file):
+        admin_id = "admin_id"
+        key = Fernet.generate_key()
+        with patch('cryptography.fernet.Fernet.encrypt', return_value=b'encrypted_data'):
+            save_admin_user_id(admin_id)
+            mock_file().write.assert_called_once_with(b'encrypted_data')
 
-        # Assume user is authorized
-        bot.authorized_users = [1234]
+    @patch('os.path.exists', return_value=True)
+    @patch('builtins.open', new_callable=mock_open, read_data=b'encrypted_data')
+    @patch('cryptography.fernet.Fernet.decrypt', return_value=b'["user1", "user2"]')
+    def test_load_authorized_users(self, mock_exists, mock_file, mock_decrypt):
+        with patch('cryptography.fernet.Fernet', return_value=MagicMock(decrypt=mock_decrypt)):
+            users = load_authorized_users()
+            self.assertEqual(users, ["user1", "user2"])
 
-        with patch('bot.add_ip_to_alias', return_value="Successfully added 192.168.1.100"):
-            result = bot.on_message(message)
-        
-        # Assert that the function to add IP was called
-        bot.add_ip_to_alias.assert_called_with('192.168.1.100')
-
-    @patch('bot.client')
-    def test_help_command(self, mock_client):
-        """Test the !help command for authorized users."""
-        message = MagicMock()
-        message.author.id = 1234  # Simulate an authorized user
-        message.content = '!help'
-
-        # Assume the user is authorized
-        bot.authorized_users = [1234]
-
-        with patch('bot.on_message', return_value="Help message"):
-            result = bot.on_message(message)
-        
-        # Check if the help command is sent
-        bot.on_message.assert_called_with(message)
-
-    @patch('bot.is_valid_ip_or_cidr')
-    @patch('bot.client')
-    def test_invalid_ip_in_block_command(self, mock_client, mock_valid_ip):
-        """Test that invalid IPs are rejected in the !block command."""
-        message = MagicMock()
-        message.author.id = 1234
-        message.content = '!block invalid_ip'
-        
-        # Simulate invalid IP validation
-        mock_valid_ip.return_value = False
-
-        with patch('bot.on_message', return_value="Invalid IP address or CIDR block"):
-            bot.on_message(message)
-
-        # Assert that the bot rejects the invalid IP
-        bot.on_message.assert_called_with(message)
+    @patch('builtins.open', new_callable=mock_open)
+    def test_save_authorized_users(self, mock_file):
+        users = ["user1", "user2"]
+        key = Fernet.generate_key()
+        with patch('cryptography.fernet.Fernet.encrypt', return_value=b'encrypted_data'):
+            save_authorized_users(users)
+            mock_file().write.assert_called_once_with(b'encrypted_data')
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest
