@@ -212,6 +212,20 @@ def apply_firewall_changes():
     else:
         return f"Failed to apply firewall rules. Status code: {response.status_code}"
 
+# Function to toggle the auto-apply firewall setting
+def toggle_auto_apply_firewall():
+    # Toggle the value of auto_apply_firewall
+    configurations['auto_apply_firewall'] = not configurations.get('auto_apply_firewall', False)
+    
+    # Save the updated configuration
+    save_configurations(configurations)
+
+    # Return a message indicating the new state
+    if configurations['auto_apply_firewall']:
+        return "Auto-apply of firewall rules is now enabled."
+    else:
+        return "Auto-apply of firewall rules is now disabled."
+    
 # Function to validate if input is a valid IP or CIDR
 def is_valid_ip_or_cidr(ip_or_cidr):
     try:
