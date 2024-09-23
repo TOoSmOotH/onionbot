@@ -156,6 +156,35 @@ def add_ip_to_alias(ip_address):
     else:
         return f"Failed to add {ip_address} to {alias_name}. Status code: {response.status_code}"
 
+# Function to generate a report of blocked and banned IPs
+def banned_ips_report():
+    # Get blocked and permanently banned IPs from configurations
+    blocked_ips = configurations.get('blocked_ips', {})
+    permanently_banned_ips = configurations.get('permanently_banned_ips', [])
+
+    if not blocked_ips and not permanently_banned_ips:
+        return "There are no currently blocked or banned IPs."
+
+    report = []
+
+    # List temporarily blocked IPs with their block counts and unblock times
+    if blocked_ips:
+        report.append("Temporarily Blocked IPs:")
+        for ip, info in blocked_ips.items():
+            block_count = info.get('block_count', 0)
+            unblock_time = info.get('unblock_time', 0)
+            unblock_time_str = time.ctime(unblock_time) if unblock_time else "Unknown"
+            report.append(f"IP: {ip}, Block Count: {block_count}, Unblock Time: {unblock_time_str}")
+    
+    # List permanently banned IPs
+    if permanently_banned_ips:
+        report.append("\nPermanently Banned IPs:")
+        for ip in permanently_banned_ips:
+            report.append(f"IP: {ip} (Permanently Banned)")
+
+    # Return the report as a formatted string
+    return "\n".join(report)
+
 # Function to remove IP from OPNsense alias (for unblocking)
 def remove_ip_from_alias(ip_address):
     config = configurations
@@ -246,13 +275,17 @@ def is_rfc1918_address(ip):
 def is_in_allowlist(ip_address):
     return ip_address in configurations['allowlist_ips']
 
-# Function to perform reverse DNS lookup
+# Function to perform reverse DNS lookup with error handling
 def reverse_dns_lookup(ip_address):
     try:
         hostname, _, _ = socket.gethostbyaddr(ip_address)
         return hostname
     except socket.herror:
+        # Handle the case where reverse DNS fails
         return "No reverse DNS found"
+    except Exception as e:
+        # Handle any other possible exceptions
+        return f"DNS lookup error: {str(e)}"
 
 # Function to temporarily block an IP and schedule unblock
 def block_ip_temporarily(ip_address, message_channel):
@@ -361,14 +394,20 @@ def list_banned_ips():
     banned_ips_list = []
     
     # List temporarily blocked IPs
-    for ip, info in blocked_ips.items():
-        hostname = reverse_dns_lookup(ip)
-        banned_ips_list.append(f"IP: {ip} ({hostname}), Block Count: {info['block_count']}, Unblock Time: {time.ctime(info['unblock_time'])}")
-
+    if blocked_ips:
+        banned_ips_list.append("Temporarily Blocked IPs:")
+        for ip, info in blocked_ips.items():
+            hostname = reverse_dns_lookup(ip)  # Reverse DNS with error handling
+            blocked_count = info.get('block_count', 0)
+            unblock_time = time.ctime(info['unblock_time']) if 'unblock_time' in info else "Unknown"
+            banned_ips_list.append(f"IP: {ip} ({hostname}), Block Count: {blocked_count}, Unblock Time: {unblock_time}")
+    
     # List permanently banned IPs
-    for ip in permanently_banned_ips:
-        hostname = reverse_dns_lookup(ip)
-        banned_ips_list.append(f"IP: {ip} ({hostname}), Permanently Banned")
+    if permanently_banned_ips:
+        banned_ips_list.append("\nPermanently Banned IPs:")
+        for ip in permanently_banned_ips:
+            hostname = reverse_dns_lookup(ip)  # Reverse DNS with error handling
+            banned_ips_list.append(f"IP: {ip} ({hostname}) (Permanently Banned)")
     
     return "\n".join(banned_ips_list)
 

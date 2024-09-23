@@ -1,0 +1,27 @@
+{
+  "platform": "discord",
+  "opnsense": {
+    "ip": "your_opnsense_ip",
+    "api_key": "your_api_key",
+    "api_secret": "your_api_secret",
+    "alias_name": "your_alias_name"
+  },
+  "discord": {
+    "token": "your_discord_token"
+  },
+  "slack": {
+    "app_token": "your_slack_app_token",
+    "bot_token": "your_slack_bot_token"
+  },
+  "matrix": {
+    "homeserver": "https://your_matrix_homeserver",
+    "user_id": "@youruser:homeserver",
+    "password": "your_password"
+  },
+  "block_timeout_seconds": 3600,
+  "auto_apply_firewall": false,
+  "allowlist_ips": [],
+  "blocked_ips": {},
+  "permanently_banned_ips": [],
+  "authorized_users": []
+}
